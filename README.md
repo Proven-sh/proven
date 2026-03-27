@@ -9,6 +9,7 @@ Every rule was discovered empirically: run an instruction 5 times with a fresh a
 | Rule | Pattern | Before | After | Cost |
 |------|---------|--------|-------|------|
 | [RULE-001](methodology/INSTRUCTION-DESIGN.md#rule-001-explicit_enumeration) | EXPLICIT_ENUMERATION | 0/5 | 5/5 | $0.79 |
+| [RULE-002](methodology/INSTRUCTION-DESIGN.md#rule-002-missing_infrastructure) | MISSING_INFRASTRUCTURE | 1/5 | 5/5 | $0.95 |
 
 ## How rules are discovered
 

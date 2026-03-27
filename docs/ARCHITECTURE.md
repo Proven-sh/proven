@@ -20,7 +20,7 @@
 │                     SANDBOX                           │
 │  /tmp/agent-test-{uuid}/                             │
 │  Fresh copy of playbook + state from spec            │
-│  Bash wrapper logs all commands                      │
+│  Stream-json captures all tool calls                 │
 └──────────────────────┬───────────────────────────────┘
                        │
                        ▼

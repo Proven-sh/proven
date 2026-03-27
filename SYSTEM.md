@@ -165,75 +165,14 @@ This is the curve. The equivalent of val_bpb dropping in autoresearch. One numbe
 
 ---
 
-## Two network effects
-
-### Network effect #1: Business intelligence
-
-Every user who runs a Proven playbook feeds anonymized performance data into a collective network. Which niches work, which prices convert, where competition saturates. User #47's agents benefit from the results of all other operators.
-
-This is the Waze model. You drive, your position feeds the map, you see traffic before you're in it. More drivers, better map.
-
-Users come for the playbook. They stay for the network.
-
-### Network effect #2: Instruction intelligence
-
-This is the deeper moat. Every playbook execution generates data on instruction reliability:
-
-- "Step 3 was followed correctly by 94% of agents."
-- "Step 7 fails 40% of the time with Haiku but 2% with Sonnet."
-- "This formulation has a 98% compliance rate vs 71% for the old version."
-- "Steps with more than 3 parameters have a 4x higher failure rate."
-
-No one else collects this data. It grows with every run, every playbook, every user, every model update. And it feeds a virtuous cycle:
-
-```
-Better instruction data → Better playbooks → More users → More runs → Better data
-```
-
----
-
-## What is copiable and what is not
-
-| Asset | Copiable? | Note |
-|---|---|---|
-| A single playbook | Yes | Open-source by design — it feeds the network |
-| Design rules ("one command per step") | Yes | Like design patterns — everyone knows MVC |
-| Instruction reliability data (thousands of runs, dozens of playbooks, multiple models) | No | Network effect #2 |
-| Aggregated business data (niches, pricing, markets) | No | Network effect #1 |
-| The process for creating agent-proof playbooks (the "test kitchen") | Difficult | Requires the tooling + data + expertise |
-
-The playbook is the hook. The network is the product. The data is the moat.
-
-Someone can copy a recipe. No one can copy the lab that produces the recipes.
-
----
-
-## The economics
+## Certification cost
 
 | Metric | Value |
 |---|---|
-| Cost per fix | ~$0.79 |
+| Cost per fix | ~$0.87 |
 | Average iterations to convergence | 1 |
 | Runs per iteration | 5 |
 | Cost per full playbook certification (7 steps) | < $2 |
 | Time for full certification | < 2 hours |
 
-The business model:
-
-| Layer | Price | Value |
-|---|---|---|
-| Playbooks | Free | Acquisition. The hook. Open-source, feeds the network. |
-| Proven Intelligence API | $19/month | Collective business intelligence (niches, benchmarks, pricing). |
-| Proven Network | $99/month | Niche deconfliction, market alerts, cross-vertical data. |
-
-Distribution is framework-agnostic. Primary channel: Paperclip (34k+ users looking for "what to do"). But the core — scripts, API, instructions — works with any agent framework.
-
----
-
-## What Proven is
-
-Proven is the science of how to talk to agents.
-
-The playbooks prove it works. The network proves it scales. The instruction intelligence accumulates expertise that no one can replicate without walking the same path.
-
-Someone can copy a recipe. No one can copy the lab that produces the recipes.
+The entire KDP Machine pipeline went from PRI 74.3 to PRI 100 for $1.74 total. Two fixes, two design rules discovered, zero human intervention during the reformulation loops.

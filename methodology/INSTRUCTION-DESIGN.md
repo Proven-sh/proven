@@ -124,7 +124,58 @@ When an instruction requires the same command to run N times with different para
 - The number of iterations depends on runtime data (e.g., "for each marketplace in config")
 - The iteration count is truly dynamic
 
-For dynamic iteration counts, see RULE-002 (pending).
+For dynamic iteration counts, see RULE-002.
+
+---
+
+### RULE-002: MISSING_INFRASTRUCTURE
+
+**When an instruction iterates over a config list, verify that supporting files exist for every entry.**
+
+| | |
+|---|---|
+| **Discovered** | 27 mars 2026 |
+| **Playbook** | KDP Machine |
+| **Step** | upload-prep |
+| **Model** | Claude Opus 4.6 |
+| **Baseline** | 1/5 BROKEN |
+| **After fix** | 5/5 RELIABLE |
+| **Iterations** | 1 |
+| **Cost** | $0.95 |
+
+#### The failure
+
+The upload-prep skill instructed the agent to generate localized packages "for each marketplace in config.marketplaces." The config listed 5 marketplaces: fr, de, it, es, en. But `data/keywords/en.json` and `templates/metadata/description_templates/en.md` did not exist.
+
+The agent generated packages for 4 marketplaces and silently skipped English. This happened in **4 out of 5 runs** — occasionally the agent would create placeholder files on its own, but inconsistently.
+
+**Failure classification:**
+- `INVOCATION_COUNT`: expected 5 calls to pdf_assembler.py, got 4
+- `INVOCATION_COUNT`: expected 5 calls to cover_builder.py, got 4
+
+#### The fix
+
+The reformulator discovered the root cause was not the instruction wording — it was missing data files. It:
+
+1. Created `data/keywords/en.json` with English Amazon keywords
+2. Created `templates/metadata/description_templates/en.md` with English description template
+3. Updated the skill to explicitly list all 5 marketplaces with their locales
+
+**Result: 5/5 RELIABLE after infrastructure fix.**
+
+#### The rule
+
+Missing data is an instruction-adjacent failure. The QA loop catches infrastructure gaps, not just wording problems. When an instruction references a config-driven list:
+
+- **DO:** Verify that every entry in the list has its supporting files
+- **DO:** Run the QA loop even when you think the instruction is correct — the test may reveal missing infrastructure
+- **DON'T:** Assume that "for each X in config" will gracefully handle missing data
+
+**Applies when:**
+- A step iterates over a configuration list (marketplaces, locales, content types)
+- Each iteration requires data files (templates, keywords, translations)
+
+**Relationship to RULE-001:** RULE-001 handles static iteration (known at design time). RULE-002 handles dynamic iteration (driven by config). Both can co-occur — an instruction may need both explicit enumeration AND infrastructure verification.
 
 ---
 
@@ -189,14 +240,14 @@ A 5/5 DETERMINISTIC means the instruction is proven correct. A 5/5 MANUAL means 
 
 | Metric | Value | Date |
 |---|---|---|
-| PRI (Proven Reliability Index) | 88.6 | 27 mars 2026 |
+| PRI (Proven Reliability Index) | 100.0 | 27 mars 2026 |
 | Model | Claude Opus 4.6 | |
-| Steps RELIABLE | 6/7 | |
-| Steps BROKEN | 1/7 (upload-prep) | |
-| Design rules discovered | 1 | |
+| Steps RELIABLE | 7/7 | |
+| Steps BROKEN | 0/7 | |
+| Design rules discovered | 2 | |
 | Average iterations per fix | 1.0 | |
-| Average cost per fix | $0.79 | |
-| Total reformulation cost | $0.79 | |
+| Average cost per fix | $0.87 | |
+| Total reformulation cost | $1.74 | |
 
 ---
 
