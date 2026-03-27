@@ -393,38 +393,31 @@ user runs playbook
 ## File Map
 
 ```
-proven-monorepo (private)           proven-sh/proven (public)
-├── tools/                          ├── methodology/
-│   ├── agent-test/                 │   └── INSTRUCTION-DESIGN.md
-│   │   ├── sandbox.py              ├── docs/
-│   │   ├── trace_builder.py        │   └── ARCHITECTURE.md
-│   │   ├── judge.py                ├── SYSTEM.md
-│   │   ├── runner.py               ├── README.md
-│   │   ├── cli.py                  └── LICENSE
-│   │   ├── matchers.py
-│   │   ├── capture-insight.py
-│   │   ├── reformulator.md
-│   │   ├── specs/*.yaml
+proven-monorepo (private)           any-playbook/ (e.g. kdp-machine)
+├── tools/                          ├── skills/           ← what the reformulator edits
+│   ├── agent-test/                 ├── scripts/          ← execution layer (read-only)
+│   │   ├── sandbox.py              ├── specs/            ← what the judge checks
+│   │   ├── trace_builder.py        │   ├── fixtures/     ← pre-generated test data
+│   │   ├── judge.py                │   ├── step-1.yaml
+│   │   ├── runner.py               │   ├── step-2.yaml
+│   │   ├── cli.py                  │   └── ...
+│   │   ├── matchers.py             ├── config/
+│   │   ├── capture-insight.py      ├── data/
+│   │   ├── reformulator.md         └── playbook.yaml
 │   │   └── tests/
-│   └── certify/
-│       ├── certify.py
-│       └── score.py
-├── api/
-│   └── src/
-│       ├── index.ts
-│       ├── db.ts
-│       └── routes/
-│           ├── score.ts
-│           ├── benchmarks.ts
-│           ├── metrics.ts
-│           ├── playbook.ts
-│           ├── insights.ts
-│           └── pri.ts
-├── playbooks/
-│   └── kdp-machine/
+│   └── certify/                    proven-sh/proven (public)
+│       ├── certify.py              ├── methodology/
+│       └── score.py                │   └── INSTRUCTION-DESIGN.md
+├── api/                            ├── docs/
+│   └── src/                        │   └── ARCHITECTURE.md
+│       ├── index.ts                ├── SYSTEM.md
+│       ├── db.ts                   ├── README.md
+│       └── routes/*.ts             └── LICENSE
 ├── methodology/
 ├── VISION.md
 └── CLAUDE.md
 ```
 
-The private monorepo contains the tooling, API, and playbook source. The public repo contains the methodology, documentation, and results. The QA loop runs in the private repo and publishes to both.
+**The engine (monorepo) knows nothing about any playbook.** It takes a playbook directory, finds `specs/` inside it, and runs. The specs and fixtures live in the playbook — the author knows what "correct" means for their product. The engine provides the testing infrastructure.
+
+The public repo contains the methodology and documentation. Design rules are universal — discovered from specific playbooks but applicable to all.
