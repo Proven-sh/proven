@@ -1,10 +1,10 @@
-# Instruction Design — Empirical Rules for Agent-Proof Playbooks
+# Instruction Design — Empirical Laws for Agent-Proof Playbooks
 
-> Every rule in this document was discovered by running a playbook instruction 5 times with a fresh Opus agent, measuring what broke, rewriting the instruction, and proving the fix works. Nothing here is theory. Everything is data.
+> Every law in this document was discovered by running a playbook instruction 5 times with a fresh Opus agent, measuring what broke, rewriting the instruction, and proving the fix works. Nothing here is theory. Everything is data.
 
 ---
 
-## How rules are discovered
+## How laws are discovered
 
 Proven uses an automated QA loop (the Karpathy pattern) to test and improve playbook instructions:
 
@@ -12,17 +12,17 @@ Proven uses an automated QA loop (the Karpathy pattern) to test and improve play
 2. A deterministic judge compares each run against the spec
 3. Score: X/5 (how many runs followed the instruction correctly)
 4. If not 5/5: rewrite the instruction, re-test, keep or revert
-5. When a rewrite fixes the step, extract the design rule
+5. When a rewrite fixes the step, extract the Proven Law
 
 The judge is pure code. No LLM evaluates quality. The metric is binary: did the agent do exactly what the spec says, or didn't it.
 
-Rules are numbered chronologically. Each rule states the universal principle, then cites the evidence.
+Laws are numbered chronologically. Each law states the universal principle, then cites the evidence.
 
 ---
 
-## The rules
+## The laws
 
-### RULE-001: EXPLICIT_ENUMERATION
+### LAW-001: EXPLICIT_ENUMERATION
 
 **Never say "for each X." Give the N commands explicitly.**
 
@@ -39,13 +39,13 @@ When an instruction requires the same command to run N times with different para
 
 **Does NOT apply when:**
 - The number of iterations depends on runtime data
-- The iteration count is truly dynamic (see RULE-002)
+- The iteration count is truly dynamic (see LAW-002)
 
 **Evidence:** KDP Machine, content-generation. 0/5 → 5/5, 1 iteration, $0.79. Agent called a script once instead of 3 times because instruction said "for each difficulty level." Fix: 3 explicit command blocks. [Full case study](evidence/001-explicit-enumeration.md)
 
 ---
 
-### RULE-002: MISSING_INFRASTRUCTURE
+### LAW-002: MISSING_INFRASTRUCTURE
 
 **When an instruction iterates over a config list, verify that supporting files exist for every entry.**
 
@@ -60,7 +60,7 @@ Missing data is an instruction-adjacent failure. The QA loop catches infrastruct
 - A step iterates over a configuration list (marketplaces, locales, content types)
 - Each iteration requires data files (templates, keywords, translations)
 
-**Relationship to RULE-001:** RULE-001 handles static iteration (known at design time). RULE-002 handles dynamic iteration (driven by config). Both can co-occur.
+**Relationship to LAW-001:** LAW-001 handles static iteration (known at design time). LAW-002 handles dynamic iteration (driven by config). Both can co-occur.
 
 **Evidence:** KDP Machine, upload-prep. 1/5 → 5/5, 1 iteration, $0.95. Agent generated 4/5 marketplace packages because English data files were missing. Fix: created missing files + explicit marketplace list. [Full case study](evidence/002-missing-infrastructure.md)
 
@@ -84,7 +84,7 @@ Command 2: --difficulty medium --count 40
 Command 3: --difficulty hard --count 20
 ```
 
-Evidence: RULE-001, 0/5 → 5/5.
+Evidence: LAW-001, 0/5 → 5/5.
 
 ### ANTI-002: Flags listed in prose
 
@@ -105,7 +105,7 @@ python3 scripts/my_script.py \
   --shape rectangular
 ```
 
-Evidence: RULE-001, flags omitted in 2/5 runs when listed in prose.
+Evidence: LAW-001, flags omitted in 2/5 runs when listed in prose.
 
 ### ANTI-003: Silent config assumptions
 
@@ -121,7 +121,7 @@ For each, verify these files exist before proceeding:
 If any file is missing, STOP and report the error.
 ```
 
-Evidence: RULE-002, 1/5 → 5/5.
+Evidence: LAW-002, 1/5 → 5/5.
 
 ---
 
@@ -147,11 +147,11 @@ A 5/5 DETERMINISTIC means the instruction is proven correct. A 5/5 MANUAL means 
 | Model | Claude Opus 4.6 | |
 | Steps RELIABLE | 7/7 | |
 | Steps BROKEN | 0/7 | |
-| Design rules discovered | 2 | |
+| Proven Laws discovered | 2 | |
 | Average iterations per fix | 1.0 | |
 | Average cost per fix | $0.87 | |
-| Total reformulation cost | $1.74 | |
+| Total proving cost | $1.74 | |
 
 ---
 
-*This document is auto-enriched by the Proven QA loop. Each successful reformulation appends a new rule with its evidence. The document grows with every fix.*
+*This document is auto-enriched by the Proven QA loop. Each successful proving iteration appends a new law with its evidence. The document grows with every fix.*

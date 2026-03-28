@@ -60,7 +60,7 @@
               X/5 = RELIABLE | FLAKY | BROKEN
 ```
 
-This runs 5 times per iteration. The reformulator reads the verdict, edits skill.md, and triggers the next iteration.
+This runs 5 times per iteration. The Prover reads the verdict, edits skill.md, and triggers the next iteration.
 
 ---
 
@@ -68,7 +68,7 @@ This runs 5 times per iteration. The reformulator reads the verdict, edits skill
 
 ### Test Spec (specs/*.yaml)
 
-The spec is the source of truth for what a step SHOULD do. It is read-only — the reformulator cannot modify it. Format:
+The spec is the source of truth for what a step SHOULD do. It is read-only — the Prover cannot modify it. Format:
 
 ```yaml
 step: content_generation
@@ -258,7 +258,7 @@ Execute the step exactly as described in the skill.
 When done, do not ask questions. Just stop.
 ```
 
-### Reformulator (reformulator.md)
+### Prover (prover.md)
 
 The Karpathy loop agent. A Claude Opus instance that runs autonomously.
 
@@ -269,7 +269,7 @@ The Karpathy loop agent. A Claude Opus instance that runs autonomously.
 **The loop:**
 1. Read verdict.json
 2. Identify which assertions fail most often
-3. Edit skill.md with a reformulation idea
+3. Edit skill.md with a proving hypothesis
 4. git commit
 5. Run 5 tests via runner
 6. Score improved → keep. Otherwise → `git reset --hard HEAD~1`
@@ -285,13 +285,13 @@ The Karpathy loop agent. A Claude Opus instance that runs autonomously.
 
 ### Capture Pipeline (capture-insight.py)
 
-Runs after every successful reformulation (keep). Three outputs:
+Runs after every successful proving iteration (keep). Three outputs:
 
 1. **POST /v1/insights** — structured insight with before/after, failure type, fix type, cost
 2. **insights/{step}-{date}.md** — standalone markdown for marketing
-3. **methodology/INSTRUCTION-DESIGN.md** — appends new rule with evidence
+3. **methodology/INSTRUCTION-DESIGN.md** — appends new Proven Law with evidence
 
-The capture is triggered by the reformulator as step 9 of its loop. No human intervention.
+The capture is triggered by the Prover as step 9 of its loop. No human intervention.
 
 ---
 
@@ -312,8 +312,8 @@ Base URL: `http://localhost:3400` (internal, not yet public)
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/v1/insights` | POST | Submit a reformulation fix |
-| `/v1/insights/design-rules` | GET | Aggregated design rules with evidence counts |
+| `/v1/insights` | POST | Submit a proving fix |
+| `/v1/insights/design-rules` | GET | Aggregated Proven Laws with evidence counts |
 | `/v1/insights/results` | GET | Public-facing results for marketing |
 
 ### Certification
@@ -347,11 +347,11 @@ playbook + specs
           → POST /v1/pri
 ```
 
-### Reformulation flow
+### Proving flow
 
 ```
 verdict (not 5/5)
-  → reformulator reads failures
+  → Prover reads failures
     → edits skill.md
       → git commit
         → runner (5x)
@@ -394,7 +394,7 @@ user runs playbook
 
 ```
 proven-monorepo (private)           any-playbook/ (e.g. kdp-machine)
-├── tools/                          ├── skills/           ← what the reformulator edits
+├── tools/                          ├── skills/           ← what the Prover edits
 │   ├── agent-test/                 ├── scripts/          ← execution layer (read-only)
 │   │   ├── sandbox.py              ├── specs/            ← what the judge checks
 │   │   ├── trace_builder.py        │   ├── fixtures/     ← pre-generated test data
@@ -403,7 +403,7 @@ proven-monorepo (private)           any-playbook/ (e.g. kdp-machine)
 │   │   ├── cli.py                  │   └── ...
 │   │   ├── matchers.py             ├── config/
 │   │   ├── capture-insight.py      ├── data/
-│   │   ├── reformulator.md         └── playbook.yaml
+│   │   ├── prover.md               └── playbook.yaml
 │   │   └── tests/
 │   └── certify/                    proven-sh/proven (public)
 │       ├── certify.py              ├── methodology/
@@ -420,4 +420,4 @@ proven-monorepo (private)           any-playbook/ (e.g. kdp-machine)
 
 **The engine (monorepo) knows nothing about any playbook.** It takes a playbook directory, finds `specs/` inside it, and runs. The specs and fixtures live in the playbook — the author knows what "correct" means for their product. The engine provides the testing infrastructure.
 
-The public repo contains the methodology and documentation. Design rules are universal — discovered from specific playbooks but applicable to all.
+The public repo contains the methodology and documentation. Proven Laws are universal — discovered from specific playbooks but applicable to all.

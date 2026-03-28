@@ -45,7 +45,7 @@ In autoresearch, the variable is `train.py` and the metric is `val_bpb`. In Prov
    - What does the state look like after?
 4. Score: PASS or FAIL. No judgment, no opinion. Code comparison.
 5. Repeat 5 times. Score: X/5.
-6. If not 5/5: an autonomous reformulator rewrites the instruction.
+6. If not 5/5: an autonomous prover rewrites the instruction.
    - It reads the failure report
    - It modifies the instruction (the ONLY file it can change)
    - It commits
@@ -58,7 +58,7 @@ Three critical design constraints make this work:
 
 **The judge is never an LLM.** The evaluation is string comparison, JSON diff, filesystem check. If we used an LLM to evaluate, we'd be using an unreliable tool to measure the reliability of unreliable tools. The snake eating its tail. The judge is pure code.
 
-**The reformulator is not the executor.** The agent that rewrites the instruction is not the agent being tested. The executor is a fresh instance with no context, no memory, no knowledge of why it's being tested. This eliminates the Hawthorne effect — the executor doesn't try harder because it knows it's being watched.
+**The Prover is not the executor.** The agent that rewrites the instruction is not the agent being tested. The executor is a fresh instance with no context, no memory, no knowledge of why it's being tested. This eliminates the Hawthorne effect — the executor doesn't try harder because it knows it's being watched.
 
 **One variable, one metric.** The instruction text is the only thing that changes between iterations. The scripts, the test specs, the judge, the sandbox — all frozen. When the score improves, we know exactly what caused it: the instruction got better.
 
@@ -90,18 +90,18 @@ Two steps broken. The QA loop went to work.
 
 The instruction told the agent to generate mazes "for each difficulty level." The agent interpreted this as one call with all difficulties combined, instead of three separate calls.
 
-The reformulator identified the failure pattern, rewrote the instruction to use three explicit command blocks (one per difficulty with exact parameter values), committed, re-tested: 5/5.
+The Prover identified the failure pattern, rewrote the instruction to use three explicit command blocks (one per difficulty with exact parameter values), committed, re-tested: 5/5.
 
 - **Iterations:** 1
 - **Cost:** $0.79
 - **Time:** 23 API turns
-- **Design rule discovered:** RULE-001 EXPLICIT_ENUMERATION — never say "for each X," give the N commands explicitly.
+- **Proven Law discovered:** LAW-001 EXPLICIT_ENUMERATION — never say "for each X," give the N commands explicitly.
 
 ### Fix #2: Upload Prep (1/5 → 5/5)
 
 The agent generated upload packages for 4 marketplaces instead of 5. Investigation revealed the root cause was not the instruction — it was missing data files. No English keyword file existed, no English description template existed.
 
-The reformulator created the missing files, updated the skill to explicitly list all 5 marketplaces, re-tested: 5/5.
+The Prover created the missing files, updated the skill to explicitly list all 5 marketplaces, re-tested: 5/5.
 
 - **Iterations:** 1
 - **Cost:** < $1
@@ -111,7 +111,7 @@ The reformulator created the missing files, updated the skill to explicitly list
 
 **PRI: 74.3 → 88.6 → 100.0**
 
-All 7 steps RELIABLE. 35 out of 35 test runs passing. Total reformulation cost under $2. The entire certification took one session.
+All 7 steps RELIABLE. 35 out of 35 test runs passing. Total proving cost under $2. The entire certification took one session.
 
 ---
 
@@ -175,4 +175,4 @@ This is the curve. The equivalent of val_bpb dropping in autoresearch. One numbe
 | Cost per full playbook certification (7 steps) | < $2 |
 | Time for full certification | < 2 hours |
 
-The entire KDP Machine pipeline went from PRI 74.3 to PRI 100 for $1.74 total. Two fixes, two design rules discovered, zero human intervention during the reformulation loops.
+The entire KDP Machine pipeline went from PRI 74.3 to PRI 100 for $1.74 total. Two fixes, two Proven Laws discovered, zero human intervention during the proving loops.

@@ -1,4 +1,4 @@
-# RULE-002: MISSING_INFRASTRUCTURE — Case Study
+# LAW-002: MISSING_INFRASTRUCTURE — Case Study
 
 **Playbook:** KDP Machine (Amazon KDP activity book publisher)
 **Step:** upload-prep
@@ -25,7 +25,7 @@ This happened in **4 out of 5 runs**. In the 5th run, the agent happened to crea
 
 ## The fix
 
-The reformulator discovered the root cause was not the instruction wording — it was missing data files. It:
+The Prover discovered the root cause was not the instruction wording — it was missing data files. It:
 
 1. Created `data/keywords/en.json` with English Amazon keywords
 2. Created `templates/metadata/description_templates/en.md` with English description template
@@ -37,7 +37,7 @@ The reformulator discovered the root cause was not the instruction wording — i
 
 ## Cost
 
-$0.95 total (28 API turns for the reformulator + 5 executor runs).
+$0.95 total (28 API turns for the Prover + 5 executor runs).
 
 ## Insight
 

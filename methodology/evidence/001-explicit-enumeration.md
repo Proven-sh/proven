@@ -1,4 +1,4 @@
-# RULE-001: EXPLICIT_ENUMERATION — Case Study
+# LAW-001: EXPLICIT_ENUMERATION — Case Study
 
 **Playbook:** KDP Machine (Amazon KDP activity book publisher)
 **Step:** content-generation
@@ -79,4 +79,4 @@ python3 scripts/maze_generator.py \
 
 ## Cost
 
-$0.79 total (23 API turns for the reformulator + 5 executor runs).
+$0.79 total (23 API turns for the Prover + 5 executor runs).

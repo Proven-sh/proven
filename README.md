@@ -1,17 +1,17 @@
 # Proven
 
-Design rules for writing instructions that AI agents follow reliably.
+Proven Laws for writing instructions that AI agents follow reliably.
 
-Every rule was discovered empirically: run an instruction 5 times with a fresh agent, measure what breaks, rewrite, prove the fix works. Nothing here is theory. Everything is data.
+Every law was discovered empirically: run an instruction 5 times with a fresh agent, measure what breaks, rewrite, prove the fix works. Nothing here is theory. Everything is data.
 
-## Rules
+## Laws
 
-| Rule | Pattern | Before | After | Cost | Evidence |
-|------|---------|--------|-------|------|----------|
-| [RULE-001](methodology/INSTRUCTION-DESIGN.md#rule-001-explicit_enumeration) | EXPLICIT_ENUMERATION | 0/5 | 5/5 | $0.79 | [evidence](methodology/evidence/001-explicit-enumeration.md) |
-| [RULE-002](methodology/INSTRUCTION-DESIGN.md#rule-002-missing_infrastructure) | MISSING_INFRASTRUCTURE | 1/5 | 5/5 | $0.95 | [evidence](methodology/evidence/002-missing-infrastructure.md) |
+| Law | Pattern | Before | After | Cost | Evidence |
+|-----|---------|--------|-------|------|----------|
+| [LAW-001](methodology/INSTRUCTION-DESIGN.md#law-001-explicit_enumeration) | EXPLICIT_ENUMERATION | 0/5 | 5/5 | $0.79 | [evidence](methodology/evidence/001-explicit-enumeration.md) |
+| [LAW-002](methodology/INSTRUCTION-DESIGN.md#law-002-missing_infrastructure) | MISSING_INFRASTRUCTURE | 1/5 | 5/5 | $0.95 | [evidence](methodology/evidence/002-missing-infrastructure.md) |
 
-## How rules are discovered
+## How laws are discovered
 
 We use an automated QA loop that follows the [Karpathy autoresearch](https://github.com/karpathy/autoresearch) pattern: one variable (the instruction text), one scalar metric (X/5 compliance), keep/revert branching, runs until convergence.
 
