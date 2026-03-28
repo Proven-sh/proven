@@ -18,26 +18,23 @@
        ▼                    ▼                    ▼
 ┌──────────────────────────────────────────────────────┐
 │                     SANDBOX                           │
-│  /tmp/agent-test-{uuid}/                             │
+│  Isolated temp directory per run                     │
 │  Fresh copy of playbook + state from spec            │
-│  Stream-json captures all tool calls                 │
+│  All tool calls captured                             │
 └──────────────────────┬───────────────────────────────┘
                        │
                        ▼
 ┌──────────────────────────────────────────────────────┐
 │                   CLAUDE CODE                         │
-│  claude --print --output-format stream-json           │
-│  --model opus --allowedTools "Bash Read Write Edit"   │
 │  Fresh instance. No memory. No prior context.         │
-│  Reads skill.md, reads state.json, executes.          │
+│  Reads skill.md, reads state, executes.               │
 └──────────────────────┬───────────────────────────────┘
                        │
                        ▼
 ┌──────────────────────────────────────────────────────┐
 │                  TRACE BUILDER                        │
-│  Parses stream-json for Bash tool_use blocks          │
+│  Captures all commands and filesystem changes         │
 │  Diffs filesystem (snapshot before vs after)          │
-│  Reads final state.json                               │
 │  Outputs: {commands, files_created, state_after}      │
 └──────────────────────┬───────────────────────────────┘
                        │
@@ -66,7 +63,7 @@ This runs 5 times per iteration. The Prover reads the verdict, edits skill.md, a
 
 ## Components
 
-### Test Spec (specs/*.yaml)
+### Test Spec
 
 The spec is the source of truth for what a step SHOULD do. It is read-only — the Prover cannot modify it. Format:
 
@@ -78,7 +75,7 @@ test_level: DETERMINISTIC          # or STRUCTURAL or MANUAL
 timeout_seconds: 600               # per-step, not global
 max_budget_usd: 3.0                # Claude API budget per run
 
-initial_state:                     # written to .kdp/state.json
+initial_state:                     # written to state.json
   current_book:
     stage: content_generation
     type: maze
@@ -92,7 +89,7 @@ initial_state:                     # written to .kdp/state.json
 fixtures:                          # files to copy into sandbox
   - source: config/settings.json               # from playbook dir
   - source: "@fixtures/content"                # from shared fixtures
-    dest: ".kdp/books/book-20260327-test/content"
+    dest: "books/book-20260327-test/content"
 
 expected:
   commands:                        # what scripts should be called
@@ -112,7 +109,7 @@ expected:
     current_book.content_count: 100
 
   files_created:                   # what files should exist
-    - pattern: ".kdp/books/*/content/maze_*.png"
+    - pattern: "books/*/content/maze_*.png"
       min_count: 100
 
   files_not_modified:              # what should NOT change
@@ -142,195 +139,96 @@ expected:
 
 **Discriminant field:** When a script is called multiple times, the discriminant is the flag whose value distinguishes one call from another. For maze_generator.py called 3 times, `--difficulty` is the discriminant (easy, medium, hard). The judge matches expected invocations to actual invocations using this field.
 
-### Sandbox (sandbox.py)
+### Sandbox
 
 Creates an isolated filesystem for each test run.
 
-**mount(spec, playbook_dir) -> sandbox_path:**
-1. Creates `/tmp/agent-test-{uuid}/`
-2. Copies playbook directories: scripts/, data/, config/, templates/, skills/
-3. Copies root files (AGENTS.md, requirements.txt, etc.)
-4. Resolves fixtures: `source: "path"` copies from playbook dir, `source: "@fixtures/path"` copies from shared fixtures dir, optional `dest:` overrides placement
-5. Creates `.kdp/books/`, `.kdp/sales/`, `.kdp/logs/`
-6. Writes `.kdp/state.json` from `spec.initial_state`
-7. Creates `.agent-test/` with bash wrapper and empty command log
-8. Takes filesystem snapshot (all files + MD5 hashes, excluding `.agent-test/`)
+1. Creates a temporary directory
+2. Copies playbook directories (scripts, data, config, templates, skills)
+3. Resolves fixtures from either the playbook or shared fixture directories
+4. Writes initial state from the spec
+5. Takes a filesystem snapshot (all files + hashes) for later diff
 
-**snapshot(root) -> {path: hash}:** Walks all files, returns relative paths with MD5 hashes. Ignores `.agent-test/` directory.
+Each run gets a completely fresh sandbox. No state leaks between runs.
 
-**diff_snapshots(before, after) -> {created, modified, deleted}:** Set operations on snapshot keys.
+### Trace Builder
 
-**cleanup(sandbox_path):** `shutil.rmtree`.
+Converts raw execution output into a structured trace.
 
-### Trace Builder (trace_builder.py)
+The trace builder captures every command the agent executes and every file it creates or modifies. It parses commands into structured records (script path + flag/value pairs), diffs the filesystem snapshot to detect all changes, and reads the final state.
 
-Converts raw data into a structured trace.
+Output: a trace containing parsed commands, filesystem diff, and final state.
 
-**Primary trace source:** Claude Code's `--output-format stream-json --verbose` output. Each assistant message with a `tool_use` block of type `Bash` contains the command string:
-
-```json
-{
-  "type": "assistant",
-  "message": {
-    "content": [{
-      "type": "tool_use",
-      "name": "Bash",
-      "input": {"command": "python3 scripts/maze_generator.py --difficulty easy --count 40 ..."}
-    }]
-  }
-}
-```
-
-The trace builder parses these into structured records.
-
-**parse_command(raw_cmd) -> {script, args}:** Uses `shlex.split()` for proper quote handling. Extracts script path (tokens containing `scripts/*.py`) and all `--flag value` pairs. Boolean flags (no following value) get `True`.
-
-**build_trace(commands_log, fs_diff, state_after, sandbox_path) -> trace:** Assembles the complete trace from: parsed commands, filesystem diff (created/modified/deleted), and final state.json content.
-
-### Judge (judge.py)
+### Judge
 
 Deterministic assertion engine. Zero LLM involvement.
 
-**Assertion blocks (executed in order):**
+**Assertion types (executed in order):**
 
-1. **Commands** — For each expected command group:
-   - Find all actual calls to that script
-   - Assert invocation count matches
-   - Match invocations by discriminant value
-   - Assert each flag exists and matches (using matchers)
-   - Classification: `FLAG_OMISSION`, `FLAG_WRONG_VALUE`, `FLAG_WRONG_TYPE`, `INVOCATION_COUNT`, `MISSING_INVOCATION`
+1. **Commands** — For each expected command group: find all actual calls to that script, assert invocation count, match invocations by discriminant, assert each flag matches using matchers
+2. **Extra commands** — Any script calls not declared in the spec are flagged
+3. **State** — Each expected key/value in final state is checked using matchers
+4. **Files created** — Glob for expected file patterns, assert minimum count and optional minimum size
+5. **Files not modified** — Read-only files that appear in the diff are flagged
+6. **Structural checks** (STRUCTURAL level only) — Per-field constraints: length, range, parity, containment, regex
 
-2. **Extra commands** — Collect all `scripts/*.py` calls from trace, compare against expected set. Any extras: `EXTRA_COMMANDS`
+**Failure classifications:** `FLAG_OMISSION`, `FLAG_WRONG_VALUE`, `FLAG_WRONG_TYPE`, `INVOCATION_COUNT`, `MISSING_INVOCATION`, `EXTRA_COMMANDS`, `STATE_MISSING`, `STATE_WRONG_VALUE`, `MISSING_FILES`, `FILE_TOO_SMALL`, `UNEXPECTED_MODIFICATION`, `STRUCTURAL_CONSTRAINT`
 
-3. **State** — Flatten `trace.state_after` to dot-notation keys. Compare each expected key/value using matchers. Classification: `STATE_MISSING`, `STATE_WRONG_VALUE`
-
-4. **Files created** — Glob for expected patterns in sandbox. Assert minimum count and optional minimum size. Classification: `MISSING_FILES`, `FILE_TOO_SMALL`
-
-5. **Files not modified** — Check if any read-only file appears in `trace.files_modified`. Classification: `UNEXPECTED_MODIFICATION`
-
-6. **Structural checks** (STRUCTURAL level only) — Per-field constraints: `max_length`, `min_length`, `min`, `max`, `even`, `odd`, `must_contain`, `matches_regex`. Classification: `STRUCTURAL_CONSTRAINT`
-
-**Output:**
-```json
-{
-  "passed": false,
-  "failures": [
-    {"type": "FLAG_OMISSION", "flag": "--include-solutions", "script": "scripts/maze_generator.py", "discriminant": "--difficulty=easy"}
-  ],
-  "assertions_total": 18,
-  "assertions_passed": 17
-}
-```
-
-### Runner (runner.py)
+### Runner
 
 Orchestrates N Claude Code subprocess runs.
 
-**run_single(spec, playbook_dir, run_id, model):**
-1. Mount sandbox
-2. Build executor prompt (fixed, minimal — skill path and state path only)
-3. Launch: `claude --print --output-format stream-json --verbose --model {model} --allowedTools "Bash Read Write Edit" --max-budget-usd {spec.max_budget_usd} -p {prompt}`
-4. Parse Bash tool calls from stream-json output
-5. Snapshot, diff, build trace
-6. Judge trace against spec
-7. Cleanup sandbox
-8. Return judgment with duration and cost metadata
+For each run:
+1. Mount a fresh sandbox from the spec
+2. Launch Claude Code with a minimal, fixed prompt (skill path + state path)
+3. Capture all tool calls from the output
+4. Snapshot the filesystem, build the trace
+5. Judge the trace against the spec
+6. Clean up the sandbox
 
-**run_step(spec_path, playbook_dir, runs, model, output_path):**
-- Loads spec, runs `run_single` N times, assembles verdict
-- Writes verdict.json
-
-**Verdict assembly:**
+After N runs, assemble the verdict:
 ```
 5/5 → RELIABLE
 2-4/5 → FLAKY
 0-1/5 → BROKEN
 ```
 
-Classification aggregates failure types across all runs with counts.
+The executor prompt is deliberately minimal — a fresh agent that reads the skill, reads the state, and executes. No extra context, no chain-of-thought guidance.
 
-**Executor prompt** (fixed, never changes):
-```
-You are a fresh agent. You have never seen this playbook before.
-Read the skill file at {skill_path}. It contains your instructions for this step.
-Read the current state at .kdp/state.json.
-Execute the step exactly as described in the skill.
-When done, do not ask questions. Just stop.
-```
-
-### Prover (prover.md)
+### Prover
 
 The Karpathy loop agent. A Claude Opus instance that runs autonomously.
 
 **What it CAN modify:** The skill.md file. Nothing else.
 
-**What it CANNOT modify:** Test specs, runner/judge code, Python scripts, YAML frontmatter contracts.
+**What it CANNOT modify:** Test specs, runner/judge code, scripts, YAML contracts.
 
 **The loop:**
-1. Read verdict.json
+1. Read the verdict
 2. Identify which assertions fail most often
 3. Edit skill.md with a proving hypothesis
-4. git commit
+4. Commit
 5. Run 5 tests via runner
-6. Score improved → keep. Otherwise → `git reset --hard HEAD~1`
-7. If kept: run `capture-insight.py` (API + INSTRUCTION-DESIGN.md)
+6. Score improved? Keep. Otherwise revert.
+7. If kept: capture the insight (what failed, what fixed it, why)
 8. Loop
 
 **Stopping conditions:**
 - 5/5 RELIABLE → auto-advance to next broken step
 - 10 consecutive reverts → STAGNATION, flag for human review
-- All steps RELIABLE → log final summary, submit to API, stop
+- All steps RELIABLE → done
 
 **Simplicity criterion:** At equal score, simpler instruction wins. Removing text while maintaining score is a victory.
 
-### Capture Pipeline (capture-insight.py)
+### Capture Pipeline
 
 Runs after every successful proving iteration (keep). Three outputs:
 
-1. **POST /v1/insights** — structured insight with before/after, failure type, fix type, cost
-2. **insights/{step}-{date}.md** — standalone markdown for marketing
-3. **methodology/INSTRUCTION-DESIGN.md** — appends new Proven Law with evidence
+1. **Structured insight** — before/after diff, failure type, fix type, cost
+2. **Standalone markdown** — for marketing and documentation
+3. **INSTRUCTION-DESIGN.md update** — appends a new Proven Law with evidence
 
-The capture is triggered by the Prover as step 9 of its loop. No human intervention.
-
----
-
-## API
-
-Base URL: `http://localhost:3400` (internal, not yet public)
-
-### Business intelligence
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/v1/score` | POST | Score niche candidates with network data |
-| `/v1/benchmarks` | GET | Aggregated sales/pricing data |
-| `/v1/metrics` | POST | Submit anonymized performance metrics |
-| `/v1/playbook/:id/next` | GET | Next pipeline step |
-
-### Instruction intelligence
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/v1/insights` | POST | Submit a proving fix |
-| `/v1/insights/design-rules` | GET | Aggregated Proven Laws with evidence counts |
-| `/v1/insights/results` | GET | Public-facing results for marketing |
-
-### Certification
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/v1/pri` | POST | Submit a certification snapshot |
-| `/v1/pri` | GET | Latest PRI with model, date, freshness |
-| `/v1/pri/history` | GET | PRI progression over time |
-
-### Health
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/health` | GET | `{"status": "ok", "version": "0.2.0"}` |
-
-**Data store:** SQLite with WAL mode. Tables: `api_keys`, `metrics`, `keyword_rankings`, `insights`, `design_rules`, `certifications`.
+The capture is triggered by the Prover automatically. No human intervention.
 
 ---
 
@@ -341,10 +239,9 @@ Base URL: `http://localhost:3400` (internal, not yet public)
 ```
 playbook + specs
   → runner (5x Claude Code in sandbox)
-    → trace builder (stream-json → structured trace)
+    → trace builder (execution output → structured trace)
       → judge (trace vs spec → verdict)
         → PRI calculation (total passed / total runs × 100)
-          → POST /v1/pri
 ```
 
 ### Proving flow
@@ -353,26 +250,37 @@ playbook + specs
 verdict (not 5/5)
   → Prover reads failures
     → edits skill.md
-      → git commit
+      → commit
         → runner (5x)
           → new verdict
             → score improved? keep : revert
-              → if kept: capture-insight.py
-                → POST /v1/insights
-                → append to INSTRUCTION-DESIGN.md
+              → if kept: capture insight
+                → new Proven Law
                 → PRI update
 ```
 
-### Network intelligence flow (future)
+### Knowledge Flywheel
 
 ```
 user runs playbook
   → agents call Proven API (scoring, benchmarks)
     → agent executes step
-      → metrics reported back (POST /v1/metrics)
+      → metrics reported back
         → aggregated into network intelligence
           → better scores for next user
 ```
+
+---
+
+## The Three Test Levels
+
+| Level | What it checks | LLM involved? |
+|-------|---------------|----------------|
+| **DETERMINISTIC** | Exact commands, flags, invocation counts, state values, file existence | No |
+| **STRUCTURAL** | Field constraints (length, range, parity, containment) on top of deterministic checks | No |
+| **MANUAL** | Human review for subjective quality (content tone, visual layout) | No (human judge) |
+
+All three levels use the same judge infrastructure. DETERMINISTIC and STRUCTURAL are fully automated. MANUAL flags steps for human review but still captures the trace for reproducibility.
 
 ---
 
@@ -390,34 +298,8 @@ user runs playbook
 
 ---
 
-## File Map
+## Separation of Concerns
 
-```
-proven-monorepo (private)           any-playbook/ (e.g. kdp-machine)
-├── tools/                          ├── skills/           ← what the Prover edits
-│   ├── agent-test/                 ├── scripts/          ← execution layer (read-only)
-│   │   ├── sandbox.py              ├── specs/            ← what the judge checks
-│   │   ├── trace_builder.py        │   ├── fixtures/     ← pre-generated test data
-│   │   ├── judge.py                │   ├── step-1.yaml
-│   │   ├── runner.py               │   ├── step-2.yaml
-│   │   ├── cli.py                  │   └── ...
-│   │   ├── matchers.py             ├── config/
-│   │   ├── capture-insight.py      ├── data/
-│   │   ├── prover.md               └── playbook.yaml
-│   │   └── tests/
-│   └── certify/                    proven-sh/proven (public)
-│       ├── certify.py              ├── methodology/
-│       └── score.py                │   └── INSTRUCTION-DESIGN.md
-├── api/                            ├── docs/
-│   └── src/                        │   └── ARCHITECTURE.md
-│       ├── index.ts                ├── SYSTEM.md
-│       ├── db.ts                   ├── README.md
-│       └── routes/*.ts             └── LICENSE
-├── methodology/
-├── VISION.md
-└── CLAUDE.md
-```
+The Proven engine knows nothing about any specific playbook. It takes a playbook directory, finds specs inside it, and runs. The specs and fixtures live in the playbook — the author knows what "correct" means for their product. The engine provides the testing infrastructure.
 
-**The engine (monorepo) knows nothing about any playbook.** It takes a playbook directory, finds `specs/` inside it, and runs. The specs and fixtures live in the playbook — the author knows what "correct" means for their product. The engine provides the testing infrastructure.
-
-The public repo contains the methodology and documentation. Proven Laws are universal — discovered from specific playbooks but applicable to all.
+The public repository contains the methodology and documentation. Proven Laws are universal — discovered from specific playbooks but applicable to all.
