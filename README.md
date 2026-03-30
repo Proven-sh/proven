@@ -37,6 +37,14 @@ PRI 100 · Opus 4.6 · 27 mars 2026
 Coverage: 29% deterministic | 43% structural | 29% manual
 ```
 
+## Quality Loop (PRI-Q)
+
+PRI measures reliability — does the agent follow the instruction? PRI-Q measures quality — is the output competitive in the market?
+
+The system benchmarks top sellers, generates AI variants, scores each against market data, and self-corrects until quality threshold is met. The winning output's visual identity propagates to every downstream asset.
+
+See [SYSTEM.md](SYSTEM.md#the-quality-loop-pri-q) for the full mechanism.
+
 ## What is Proven
 
 Proven builds playbooks that make money, ready to execute by AI agents. The playbooks are free. The intelligence network they feed is the product.

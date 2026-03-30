@@ -165,6 +165,52 @@ This is the curve. The equivalent of val_bpb dropping in autoresearch. One numbe
 
 ---
 
+## The Quality Loop (PRI-Q)
+
+PRI answers: "Does the agent follow the instruction?" It doesn't answer: "Is the output any good?"
+
+A cover builder that runs the correct commands with the correct flags scores PRI 100. But the cover could be ugly. PRI measures reliability. It doesn't measure quality.
+
+PRI-Q does.
+
+### How it works
+
+```
+1. Benchmark: download top 20 competitors from the marketplace.
+2. Analyze: Gemini Vision extracts patterns (palette, typography, layout, category signals).
+3. Calibrate: patterns become scoring anchors — "what 5/5 looks like in this niche."
+4. Generate: AI produces N cover variants from a prompt built from the benchmark data.
+5. Score: each variant is scored per dimension (market fit, typography, color, composition).
+6. Select: highest-scoring variant wins.
+7. Retry: if below threshold, scorer feedback is injected into the prompt. Loop.
+8. Extract: winning cover's palette propagates to all downstream visuals (interior, dividers).
+```
+
+Three design constraints:
+
+**The scorer is not the generator.** Gemini Vision scores. Gemini Flash generates. The judge of quality is not the producer of quality. Same principle as PRI — the evaluator and the executor are separated.
+
+**The benchmark is the anchor.** Scores are not absolute opinions. They're calibrated against real market data. "5/5 market fit" means "matches the visual language of the top 5 sellers in this exact niche." The benchmark refreshes every 90 days.
+
+**The loop is self-correcting.** On retry, the scorer's per-dimension feedback is appended to the generation prompt. "Previous attempt scored 3.2. Market fit: wrong palette. Typography: title not readable at thumbnail." The generator addresses specific weaknesses. Each attempt is informed by its predecessor's failures.
+
+### PRI-Q threshold
+
+```
+PRI-Q ≥ 4.0 → certified
+PRI-Q < 4.0 → best effort (flagged for human review)
+```
+
+PRI-Q is a weighted average across dimensions. Weights are set by the rubric author — market fit (30%) is weighted higher than color (15%) because buyers make purchase decisions at thumbnail size.
+
+### The Visual Identity contract
+
+The winning image, its score, its palette, and its generation metadata are packaged into a single JSON file: the Visual Identity. Every downstream script reads from it. The interior title page matches the cover. The section dividers match the cover. The solutions page matches the cover. One source of truth for the entire book's visual coherence.
+
+This is not a KDP-specific system. Any playbook that produces visual outputs — product images, marketing materials, packaging — can use the same pipeline. The rubric defines "what good looks like." The benchmark anchors it to reality. The loop generates until it's good enough.
+
+---
+
 ## Certification cost
 
 | Metric | Value |
